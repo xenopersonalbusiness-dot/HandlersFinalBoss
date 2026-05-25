@@ -1,11 +1,4 @@
---[[
-	Xeno's Assistant — Roblox GUI (LocalScript) v4
-	For executor environments
-	- AI has live game access by executing Lua code
-	- No static game snapshots, no cached game data
-	- AI outputs ```exec blocks to inspect/modify anything
-	- Execution results auto-feed back to AI in a loop
-]]
+
 
 local CONFIG = {
 	ApiUrl = "https://opencode.ai/zen/v1/chat/completions",
@@ -24,8 +17,8 @@ RULES:
 - To find something unknown (e.g. a leaderboard), search services via code until you find it.
 - print() outputs are returned to you. Use multiple exec steps if needed.
 - When you have the data, answer directly and concisely. NO fluff, NO meta-commentary.
-- Be extremely concise. One-line answers preferred.]],
-	MaxTokens = 8000,
+- Be extremely concise. One-line answers preferred.]]],
+	MaxTokens = 4096,
 	Temperature = 0.7,
 	MaxExecSteps = 8,
 }
@@ -38,7 +31,6 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- HTTP wrapper
 local function httpPost(url, body, headers)
 	local function checkResponse(resp)
 		if not resp then return false, "nil response" end
@@ -66,7 +58,6 @@ local function httpPost(url, body, headers)
 	return false, "No HTTP method available"
 end
 
--- Clipboard wrapper
 local function copyToClipboard(text)
 	local ok = pcall(function()
 		if setclipboard then setclipboard(text) return end
@@ -78,7 +69,6 @@ local function copyToClipboard(text)
 	return ok
 end
 
--- Lua code execution with output capture
 local function executeLua(code)
 	local output = {}
 	local function cap(...)
@@ -148,7 +138,6 @@ local function executeLua(code)
 		_ = _G,
 	}
 
-	-- Try various execution methods executors support
 	local fn, loadErr
 	if loadstring then
 		fn, loadErr = loadstring(code)
@@ -162,7 +151,6 @@ local function executeLua(code)
 		return "Error: " .. tostring(loadErr)
 	end
 
-	-- Set environment if possible (pcall for executors that support it)
 	local ok, setOk = pcall(function()
 		if setfenv then
 			setfenv(fn, env)
@@ -188,7 +176,6 @@ end
 
 local conversationHistory = {}
 
--- GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AIAgentGUI"
 screenGui.ResetOnSpawn = false
@@ -441,7 +428,6 @@ local function hideThinking()
 	end
 end
 
--- Parse code blocks from AI response
 local function parseCodeBlocks(text)
 	local segments = {}
 	local pattern = "```([%w_]+)\n(.-)```"
@@ -474,7 +460,6 @@ local function parseCodeBlocks(text)
 	return segments
 end
 
--- Extract first ```exec block from text
 local function extractExecBlock(text)
 	local _, me, code = text:find("```exec\n(.-)```")
 	if _ then return code end
@@ -780,17 +765,14 @@ local function queryAI(userMessage)
 		{ role = "system", content = CONFIG.SystemPrompt },
 	}
 
-	-- Add conversation history (keep last ~10 exchanges)
 	local startIdx = math.max(1, #conversationHistory - 19)
 	for i = startIdx, #conversationHistory do
 		table.insert(messages, conversationHistory[i])
 	end
 
-	-- Add user message (no static game context)
 	table.insert(messages, { role = "user", content = userMessage })
 	table.insert(conversationHistory, { role = "user", content = userMessage })
 
-	-- Execution loop: AI can run code, see results, and continue
 	local finalContent = nil
 	local execSteps = 0
 	local anyExecuted = false
@@ -804,7 +786,6 @@ local function queryAI(userMessage)
 			return
 		end
 
-		-- Check if AI wants to execute code
 		local execCode = extractExecBlock(content)
 
 		if not execCode then
@@ -815,7 +796,6 @@ local function queryAI(userMessage)
 		execSteps = execSteps + 1
 		anyExecuted = true
 
-		-- Show the code being executed as a copiable code block
 		addMessage("```exec\n" .. execCode .. "\n```", false)
 
 		local result = executeLua(execCode)
@@ -902,3 +882,4 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 addMessage("Lets Begin", false)
+
